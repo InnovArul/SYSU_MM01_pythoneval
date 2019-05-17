@@ -14,10 +14,24 @@ def evaluate(feature_dir, prefix, result_dir, settings):
     all_cams = list(set(gallery_cams + probe_cams))  # get unique cams
     features = {}
 
+    # get permutation indices
+    cam_permutations = gen_utils.get_cam_permutation_indices(all_cams)
+
+    # get test ids
+    test_ids = gen_utils.get_test_ids()
+
     for cam_index in all_cams:
         # read features
         cam_feature_file = osp.join(feature_dir, (prefix + '_cam{}').format(cam_index))
         features[cam_index] = gen_utils.load_feature_file(cam_feature_file)
+    
+    # perform testing
+    cam_id_locations = [1, 2, 2, 4, 5, 6]; # camera 2 and 3 are in the same location
+
+    for run_index in range(10):
+        X_gallery, Y_gallery, cam_gallery, X_probe, Y_probe, cam_probe = gen_utils.get_testing_set(features, cam_permutations,
+                                                                                            test_ids, run_index, cam_id_locations,
+                                                                                            gallery_cams, probe_cams, settings)
 
 
 if __name__ == "__main__":
