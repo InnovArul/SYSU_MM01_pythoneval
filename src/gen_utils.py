@@ -4,8 +4,8 @@ from scipy.spatial.distance import cdist
 import scipy.io as sio
 
 
-def euclidean_dist(X_gallery, X_probe):
-    return cdist(X_gallery, X_probe)
+def euclidean_dist(X_probe, X_gallery):
+    return cdist(X_probe, X_gallery)
 
 
 def get_cam_settings(settings):
@@ -38,7 +38,7 @@ def get_cam_permutation_indices(all_cams):
     all_permutations = {}
 
     for cam_index in all_cams:
-        cam_permutations = mat_cam_permutations[cam_index][0].squeeze()
+        cam_permutations = mat_cam_permutations[cam_index-1][0].squeeze()
         cam_name = "cam" + str(cam_index)
         if cam_name not in all_permutations:
             all_permutations[cam_name] = {}
@@ -48,7 +48,7 @@ def get_cam_permutation_indices(all_cams):
 
         # collect permutations for all person indices
         for person_index, rand_permutations in enumerate(cam_permutations):
-            all_permutations[cam_name][person_index] = rand_permutations
+            all_permutations[cam_name][person_index] = rand_permutations - 1
 
     return all_permutations
 
@@ -77,9 +77,7 @@ def get_testing_set(
 ):
     # cam is indexed from 1 - 6
     # person indices are indexed using 0-based numbers
-    X_gallery_rgb, Y_gallery_rgb, cam_gallery_rgb, X_probe_IR, Y_probe_IR, cam_probe_IR = (
-        [[]] * 6
-    )
+    X_gallery_rgb, Y_gallery_rgb, cam_gallery_rgb, X_probe_IR, Y_probe_IR, cam_probe_IR = [], [], [], [], [], []
 
     number_shot = settings['number_shot']
 
@@ -91,10 +89,12 @@ def get_testing_set(
         # for all the test ids, collect features
         for test_id in test_ids:
             current_id_features = current_cam_features[test_id]
-            assert len(current_id_features) != 0, 'test id feature count is 0'
+            
+            if np.any(np.array(current_id_features.shape) == 0): continue
+            # assert (not np.any(np.array(current_id_features.shape) == 0)), 'test id feature count is 0'
 
             # get the current permutation 
-            current_permutation = cam_permutations[cam_name][test_id]
+            current_permutation = cam_permutations[cam_name][test_id][run_index]
             current_permutation = current_permutation[:number_shot]
 
             selected_features = current_id_features[current_permutation, :]
@@ -105,7 +105,7 @@ def get_testing_set(
                 X_gallery_rgb = np.concatenate((X_gallery_rgb, selected_features), axis=0)
 
             Y_gallery_rgb += ([test_id] * number_shot)
-            cam_gallery_rgb += ([cam_id_locations[cam_index]] * number_shot)
+            cam_gallery_rgb += ([cam_id_locations[cam_index-1]] * number_shot)
 
     Y_gallery_rgb = np.array(Y_gallery_rgb)
     cam_gallery_rgb = np.array(cam_gallery_rgb)
@@ -118,18 +118,20 @@ def get_testing_set(
         # for all the test ids, collect features
         for test_id in test_ids:
             current_id_features = current_cam_features[test_id]
-            assert len(current_id_features) != 0, 'test id feature count is 0'
+            if np.any(np.array(current_id_features.shape) == 0): continue
+            # assert len(current_id_features) != 0, 'test id feature count is 0'
 
             if len(X_probe_IR) == 0:
                 X_probe_IR = current_id_features
+                
             else:
                 X_probe_IR = np.concatenate((X_probe_IR, current_id_features), axis=0)
             
             Y_probe_IR += ([test_id] * len(current_id_features))
-            cam_probe_IR += ([cam_id_locations[cam_index]] * len(current_id_features))
+            cam_probe_IR += ([cam_id_locations[cam_index-1]] * len(current_id_features))
 
-        Y_probe_IR = np.array(Y_probe_IR)
-        cam_probe_IR = np.array(cam_probe_IR)
+    Y_probe_IR = np.array(Y_probe_IR)
+    cam_probe_IR = np.array(cam_probe_IR)
     
     return X_gallery_rgb, Y_gallery_rgb, cam_gallery_rgb, X_probe_IR, Y_probe_IR, cam_probe_IR
 
