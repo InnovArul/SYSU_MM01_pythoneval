@@ -3,13 +3,12 @@ import gen_utils
 import numpy as np
 
 
-def evaluate(feature_dir, prefix, result_dir, settings):
+def evaluate(feature_dir, prefix, settings, total_runs=10):
     """to evaluate and rank results for SYSU_MM01 dataset
     
     Arguments:
         feature_dir {str} -- a dir where features are saved
         prefix {str} -- prefix of file names
-        result_dir {str} -- a directory to save results
     """
     gallery_cams, probe_cams = gen_utils.get_cam_settings(settings)
     all_cams = list(set(gallery_cams + probe_cams))  # get unique cams
@@ -33,7 +32,7 @@ def evaluate(feature_dir, prefix, result_dir, settings):
     mAPs = []
     cmcs = []
 
-    for run_index in range(10):
+    for run_index in range(total_runs):
         print("trial #{}".format(run_index))
         X_gallery, Y_gallery, cam_gallery, X_probe, Y_probe, cam_probe = gen_utils.get_testing_set(
             features,
@@ -71,15 +70,23 @@ def evaluate(feature_dir, prefix, result_dir, settings):
     print("mean mAP", mean_mAP)
 
 
+def evaluate_results(feature_dir, prefix, mode, number_shot, total_runs=10):
+    # evaluation settings
+    print(
+        "running evaluation for features from {} with prefix {} with mode {} and number shot {}".format(
+            feature_dir, prefix, mode, number_shot
+        )
+    )
+    print('total test runs:', total_runs)
+    settings = {}
+    settings["mode"] = mode  # indoor | all
+    settings["number_shot"] = number_shot  # 1 = single-shot | 10 = multi-shot
+    evaluate(feature_dir, prefix, settings, total_runs)   
+
+
 if __name__ == "__main__":
-    # feature_dir = "../../../scratch/sysu_mm01/deepzeropadding-14May2019-125214_deep-zero-padding/deep_zero_model#21"
-    # prefix = "deep_zero_model#21"
+    # example function call
     feature_dir = "./feature_original"
     prefix = "feat_deep_zero_padding"
-    result_dir = "./result"
 
-    # evaluation settings
-    settings = {}
-    settings["mode"] = "all"  # indoor | all
-    settings["number_shot"] = 10  # 1 = single-shot | 10 = multi-shot
-    evaluate(feature_dir, prefix, result_dir, settings)
+    evaluate_results(feature_dir, prefix, 'indoor', 1)
